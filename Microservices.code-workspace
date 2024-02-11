@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "front-end"
+		},
+		{
+			"path": "broker-service"
+		},
+		{
+			"path": "project"
+		},
+		{
+			"path": "authentication-service"
+		},
+		{
+			"path": "logger-service"
+		}
+	],
+	"settings": {
+		"go.goroot": "",
+		"editor.fontSize": 20,
+		"editor.fontFamily": "Fira Code iScript, monospace",
+		"editor.tabSize": 2,
+		"workbench.colorTheme": "Shades of Purple",
+		"powershell.cwd": "front-end",
+		"terminal.integrated.defaultProfile.windows": "PowerShell"
+	}
+}
