@@ -1,11 +1,13 @@
 package main
 
 import (
+	"broker/event"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
+	"net/rpc"
 )
 
 type RequestPayload struct {
@@ -54,7 +56,7 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	case "auth":
 		app.authenticate(w, requestPayload.Auth)
 	case "log":
-		app.logItem(w, requestPayload.Log)
+		app.logItemViaRPC(w, requestPayload.Log)
 	case "mail":
 		app.sendMail(w, requestPayload.Mail)
 
@@ -181,6 +183,75 @@ func (app *Config) sendMail(w http.ResponseWriter, mail MailPayLoad) {
 	var payload jsonResponse
 	payload.Error = false
 	payload.Message = "Message sent to" + mail.To
+
+	app.writeJson(w, http.StatusAccepted, payload)
+
+}
+
+//emmit an event to rabbit MQ
+func (app *Config) logEventViaRabbit(w http.ResponseWriter, l LogPayLoad) {
+
+	err := app.pushToQueue(l.Name, l.Data)
+	if err != nil {
+		app.errorJson(w, err)
+	}
+
+	var payload jsonResponse
+	payload.Error = false
+	payload.Message = "logged via rabbitMQ"
+
+	app.writeJson(w, http.StatusAccepted, payload)
+
+}
+
+func (app *Config) pushToQueue(name, msg string) error {
+	emitter, err := event.NewEventEmiiter(app.Rabbit)
+	if err != nil {
+		return err
+	}
+
+	payload := LogPayLoad{
+		Name: name,
+		Data: msg,
+	}
+
+	json, _ := json.MarshalIndent(&payload, "", "\t")
+	err = emitter.Push(string(json), "log.INFO")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+//log via rpc
+func (app *Config) logItemViaRPC(w http.ResponseWriter, l LogPayLoad) {
+	client, err := rpc.Dial("tcp", "logger-service:5001")
+	if err != nil {
+		app.errorJson(w, err)
+		return
+	}
+
+	rpcPayload := RPCPayload{
+		Name: l.Name,
+		Data: l.Data,
+	}
+
+	var result string
+	err = client.Call("RPCServer.LogInfo", rpcPayload, &result)
+	if err != nil {
+		app.errorJson(w, err)
+		return
+	}
+
+	payload := jsonResponse{
+		Error:   false,
+		Message: result,
+	}
 
 	app.writeJson(w, http.StatusAccepted, payload)
 

@@ -28,7 +28,6 @@
 		"editor.fontFamily": "Fira Code iScript, monospace",
 		"editor.tabSize": 2,
 		"workbench.colorTheme": "Shades of Purple",
-		"powershell.cwd": "front-end",
-		"terminal.integrated.defaultProfile.windows": "PowerShell"
+		"terminal.integrated.fontSize": 16
 	}
 }
