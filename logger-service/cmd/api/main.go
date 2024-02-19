@@ -18,7 +18,7 @@ const (
 	webPort  = "80"
 	rpcPort  = "5001"
 	mongoURL = "mongodb://mongo:27017"
-	grpcPort = "50001"
+	gRpcPort = "50001"
 )
 
 var client *mongo.Client
@@ -28,18 +28,18 @@ type Config struct {
 }
 
 func main() {
-	//connect to mongo
+	// connect to mongo
 	mongoClient, err := connectToMongo()
 	if err != nil {
-		log.Panic()
+		log.Panic(err)
 	}
 	client = mongoClient
 
-	//create context in order to disconnect
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	// create a context in order to disconnect
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	//close connection
+	// close connection
 	defer func() {
 		if err = client.Disconnect(ctx); err != nil {
 			panic(err)
@@ -52,23 +52,30 @@ func main() {
 
 	//REgister the RPC server
 	err = rpc.Register(new(RPCserver))
+	if err != nil {
+		log.Fatal("error registering RPC server", err)
+	}
 	go app.rpcListen()
 
-	//start web server
-	log.Println("Starting service on PORT on :", webPort)
+	//lisn for grpc
+	go app.gRPCListen()
+
+	// start web server
+	log.Println("Starting service on port", webPort)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
 	}
+
 	err = srv.ListenAndServe()
 	if err != nil {
-		log.Println(err)
 		log.Panic()
 	}
+
 }
 
 func (app *Config) rpcListen() error {
-	log.Println("Starting RPC server on port : ", rpcPort)
+	log.Println("Starting RPC server on port ", rpcPort)
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", rpcPort))
 	if err != nil {
 		return err
@@ -82,21 +89,25 @@ func (app *Config) rpcListen() error {
 		}
 		go rpc.ServeConn(rpcConn)
 	}
+
 }
 
 func connectToMongo() (*mongo.Client, error) {
-	//create connection options
+	// create connection options
 	clientOptions := options.Client().ApplyURI(mongoURL)
 	clientOptions.SetAuth(options.Credential{
 		Username: "admin",
 		Password: "password",
 	})
 
-	//connect
+	// connect
 	c, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		log.Println("error connecting to mongo client", err)
+		log.Println("Error connecting:", err)
 		return nil, err
 	}
+
+	log.Println("Connected to mongo!")
+
 	return c, nil
 }

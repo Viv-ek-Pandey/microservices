@@ -9,12 +9,12 @@ import (
 
 type RPCserver struct{}
 
-type RPCPlayload struct {
+type RPCPayload struct {
 	Name string
 	Data string
 }
 
-func (r *RPCserver) LogInfo(payload RPCPlayload, resp *string) error {
+func (r *RPCserver) LogInfo(payload RPCPayload, resp *string) error {
 	collection := client.Database("logs").Collection("logs")
 	_, err := collection.InsertOne(context.TODO(), data.LogEntry{
 		Name:      payload.Name,
